@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#183b2b">
+<title>OMM スマホコンパス道場 v2</title>
+<style>
+:root{
+  --bg:#eef2e9;--card:#fffdf8;--ink:#1c2a23;--muted:#69746e;
+  --green:#315f45;--green2:#183b2b;--orange:#e86e3b;--red:#ca4035;
+  --line:#d6dbd2;--good:#2e7d4f;--warn:#a65b22;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif}
+body{min-height:100%;padding:12px 12px 34px}
+.app{max-width:720px;margin:0 auto}
+header{padding:8px 2px 14px}
+.eyebrow{font-size:11px;letter-spacing:.18em;font-weight:800;color:var(--orange);margin:0 0 6px}
+h1{font-size:28px;line-height:1.1;margin:0}
+header p{color:var(--muted);font-size:13px;line-height:1.55;margin:9px 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:12px}
+.status-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;background:#eef0ec}
+.dot{width:9px;height:9px;border-radius:50%;background:#999}
+.badge.on .dot{background:#3b9b62}.badge.warn .dot{background:#d48238}
+button,input{font:inherit}
+button{border:1px solid #bdc7be;background:#fff;border-radius:13px;padding:12px 14px;min-height:48px;font-weight:750;color:var(--ink)}
+button.primary{background:var(--green);border-color:var(--green);color:white}
+button.orange{background:var(--orange);border-color:var(--orange);color:white}
+button:disabled{opacity:.48}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions .full{grid-column:1/-1}
+.notice{margin-top:10px;border-radius:13px;padding:10px 12px;background:#f1f2ee;color:var(--muted);font-size:12px;line-height:1.5}
+.notice.good{background:#e9f5ec;color:#285f3d}.notice.bad{background:#fff0e9;color:#8a4026}
+.compass-wrap{display:grid;place-items:center;padding:4px 0 8px}
+.compass{
+  width:min(78vw,330px);aspect-ratio:1;border-radius:50%;position:relative;
+  background:#f6f5ec;border:10px solid #e1e5dc;box-shadow:inset 0 0 0 2px #29473b;
+  overflow:hidden
+}
+.dial{position:absolute;inset:12px;border-radius:50%;transition:transform .08s linear;
+  background:
+   repeating-conic-gradient(from 0deg,#2b4238 0deg 1deg,transparent 1deg 10deg);
+}
+.dial:after{content:"";position:absolute;inset:11px;border-radius:50%;background:#faf9f1;border:1px solid #cfd6cd}
+.dir{position:absolute;z-index:3;font-weight:950;font-size:22px;left:50%;top:50%;transform-origin:0 0}
+.dir.n{color:var(--red);transform:rotate(0deg) translate(-50%,-126px) rotate(0deg)}
+.dir.e{transform:rotate(90deg) translate(-50%,-126px) rotate(-90deg)}
+.dir.s{transform:rotate(180deg) translate(-50%,-126px) rotate(-180deg)}
+.dir.w{transform:rotate(270deg) translate(-50%,-126px) rotate(-270deg)}
+.phone-arrow{position:absolute;left:50%;top:0;transform:translateX(-50%);z-index:8}
+.phone-arrow:before{content:"";display:block;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:27px solid var(--orange)}
+.center-readout{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+.center-readout .num{font-size:48px;font-weight:950;line-height:1}
+.center-readout .dirtext{font-size:14px;font-weight:900;color:var(--muted);margin-top:5px}
+.target-pin{position:absolute;z-index:7;left:50%;top:50%;width:4px;height:44%;transform-origin:50% 0;pointer-events:none}
+.target-pin:after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px rgba(232,110,59,.2)}
+.readouts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.readouts div{background:#1c2b24;color:#fff;border-radius:14px;padding:11px 9px;text-align:center}
+.readouts span{display:block;font-size:10px;opacity:.65;margin-bottom:2px}
+.readouts b{font-size:21px}
+.readouts .goal{background:var(--green)}
+.levelbar{height:10px;background:#e2e5df;border-radius:999px;overflow:hidden;margin-top:10px}
+.levelbar i{display:block;height:100%;width:0;background:var(--good);transition:width .2s}
+.big-message{text-align:center;font-weight:900;font-size:18px;margin:10px 0 0;min-height:28px}
+.big-message.good{color:var(--good)}.big-message.warn{color:var(--warn)}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.section-title h2{font-size:18px;margin:0}
+.section-title span{font-size:11px;color:var(--muted)}
+.map{width:100%;aspect-ratio:16/10;border-radius:15px;background:#f3efd7;border:1px solid #d7d0aa;overflow:hidden}
+.map svg{width:100%;height:100%;display:block}
+.map-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.map-info>div{background:#f1f3ee;border-radius:12px;padding:10px}
+.map-info span{display:block;color:var(--muted);font-size:11px}.map-info b{font-size:22px}
+.answer-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.answer-row input{min-width:0;border:1px solid #bcc7bd;border-radius:13px;padding:12px;font-size:18px}
+.practice-note{font-size:12px;color:var(--muted);line-height:1.55;margin:8px 0 0}
+details{font-size:13px}
+summary{font-weight:800;cursor:pointer}
+.manual{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;align-items:center}
+.manual input[type=range]{width:100%}
+.small{font-size:11px;color:var(--muted);line-height:1.5}
+@media(max-width:390px){
+  h1{font-size:24px}.card{padding:13px}.center-readout .num{font-size:42px}
+  .readouts b{font-size:18px}.actions{grid-template-columns:1fr}
+  .actions .full{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <p class="eyebrow">SMARTPHONE SENSOR TRAINER</p>
+  <h1>OMM スマホコンパス道場 v2 🧭</h1>
+  <p>スマホを<strong>縦向き・画面を上にして水平</strong>に持ち、実際に身体ごと回って方位を合わせる練習版。</p>
+</header>
+
+<section class="card">
+  <div class="status-row">
+    <div id="sensorBadge" class="badge"><span class="dot"></span><span>センサー未接続</span></div>
+    <div id="secureBadge" class="badge"><span class="dot"></span><span>接続確認中</span></div>
+    <div id="absBadge" class="badge"><span class="dot"></span><span>方位方式：未確認</span></div>
+  </div>
+  <div class="actions">
+    <button id="startSensor" class="primary full" type="button">🧭 スマホのコンパスを開始</button>
+    <button id="newTarget" type="button">新しい方位問題</button>
+    <button id="zeroTarget" type="button">北（0°）を練習</button>
+  </div>
+  <div id="sensorMsg" class="notice">まず「スマホのコンパスを開始」を押してね。</div>
+</section>
+
+<section class="card">
+  <div class="compass-wrap">
+    <div class="compass" aria-label="ライブコンパス">
+      <div id="dial" class="dial">
+        <div class="dir n">N</div><div class="dir e">E</div><div class="dir s">S</div><div class="dir w">W</div>
+      </div>
+      <div class="phone-arrow"></div>
+      <div id="targetPin" class="target-pin"></div>
+      <div class="center-readout">
+        <div class="num"><span id="heading">---</span>°</div>
+        <div id="headingText" class="dirtext">待機中</div>
+      </div>
+    </div>
+  </div>
+  <div class="readouts">
+    <div><span>現在方位</span><b><span id="curDeg">---</span>°</b></div>
+    <div class="goal"><span>目標方位</span><b><span id="targetDeg">---</span>°</b></div>
+    <div><span>ズレ</span><b><span id="errorDeg">---</span>°</b></div>
+  </div>
+  <div class="levelbar"><i id="levelFill"></i></div>
+  <div id="resultMsg" class="big-message">スマホを水平に持ってスタート</div>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>地図 → 方位角 練習</h2>
+    <span>磁北＝画面上</span>
+  </div>
+  <div class="map">
+    <svg viewBox="0 0 640 400" role="img" aria-label="練習用の簡易オリエンテーリング地図">
+      <rect width="640" height="400" fill="#f3efd7"/>
+      <g fill="none" stroke="#a27d50" opacity=".55">
+        <ellipse cx="155" cy="145" rx="125" ry="82" stroke-width="2"/>
+        <ellipse cx="155" cy="145" rx="105" ry="68"/>
+        <ellipse cx="155" cy="145" rx="84" ry="54"/>
+        <ellipse cx="155" cy="145" rx="64" ry="40"/>
+        <ellipse cx="485" cy="275" rx="130" ry="90" stroke-width="2"/>
+        <ellipse cx="485" cy="275" rx="108" ry="73"/>
+        <ellipse cx="485" cy="275" rx="86" ry="56"/>
+        <ellipse cx="485" cy="275" rx="63" ry="39"/>
+      </g>
+      <path d="M35 330 C180 290,230 220,330 215 S515 170,610 70" fill="none" stroke="#6b6254" stroke-width="4" stroke-dasharray="12 9"/>
+      <path d="M60 60 C145 115,125 185,240 225 S330 305,380 380" fill="none" stroke="#5590a0" stroke-width="7" stroke-linecap="round"/>
+      <g opacity=".2" stroke="#45646a">
+        <path d="M80 0V400"/><path d="M160 0V400"/><path d="M240 0V400"/><path d="M320 0V400"/>
+        <path d="M400 0V400"/><path d="M480 0V400"/><path d="M560 0V400"/>
+      </g>
+      <text x="593" y="30" font-size="22" font-weight="900" fill="#a42f28">N</text>
+      <path d="M604 38 l-10 22 h20 z" fill="#a42f28"/>
+      <line id="routeLine" x1="140" y1="300" x2="480" y2="110" stroke="#c63a33" stroke-width="6" opacity=".75"/>
+      <polygon id="startTri" points="140,280 123,315 157,315" fill="#fff" stroke="#c63a33" stroke-width="5"/>
+      <circle id="cpCircle" cx="480" cy="110" r="23" fill="#fff" stroke="#c63a33" stroke-width="5"/>
+      <text id="startLabel" x="166" y="307" font-size="19" font-weight="900" fill="#9c2b26">A</text>
+      <text id="cpLabel" x="510" y="117" font-size="19" font-weight="900" fill="#9c2b26">CP</text>
+    </svg>
+  </div>
+  <div class="map-info">
+    <div><span>あなたの予想</span><b><span id="guessShow">---</span>°</b></div>
+    <div><span>正解</span><b><span id="mapAnswer">???</span>°</b></div>
+  </div>
+  <div class="answer-row">
+    <input id="guess" inputmode="numeric" type="number" min="0" max="359" placeholder="例：240">
+    <button id="checkGuess" class="primary" type="button">答え合わせ</button>
+  </div>
+  <div class="actions" style="margin-top:8px">
+    <button id="newMap" type="button">別の地図問題</button>
+    <button id="useMapBearing" class="orange" type="button">この方位を実地練習</button>
+  </div>
+  <p id="mapMsg" class="practice-note">実物のプレートコンパスを使って A→CP の方位角を作り、その数字を入力するのがおすすめ。</p>
+</section>
+
+<section class="card">
+<details>
+  <summary>センサーが動かない時／手動テスト</summary>
+  <p class="small">センサー連動にはHTTPSで開く必要があります。まず画面が正常に動くかだけ確認したい時は下のスライダーを使えます。</p>
+  <div class="manual">
+    <input id="manualRange" type="range" min="0" max="359" value="0">
+    <b><span id="manualDeg">0</span>°</b>
+  </div>
+  <button id="manualMode" type="button" style="width:100%;margin-top:8px">手動デモに切り替える</button>
+</details>
+</section>
+
+<p class="small" style="padding:0 5px">
+※山中ではスマホをナビ代わりに頼り切らず、紙地図とプレートコンパスを主役に。これは練習・答え合わせ用。
+</p>
+</div>
+
+<script>
+(() => {
+  if (window.__ommCompassV2Init) return;
+  window.__ommCompassV2Init = true;
+
+  const $ = id => document.getElementById(id);
+  const norm = d => ((d % 360) + 360) % 360;
+  const diffSigned = (a,b) => ((a - b + 540) % 360) - 180;
+  const absDiff = (a,b) => Math.abs(diffSigned(a,b));
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  const dirName = d => dirs[Math.round(norm(d)/22.5)%16];
+
+  let heading = null, rawHeading = null;
+  let target = 0;
+  let sensorStarted = false;
+  let gotAbsolute = false;
+  let manual = false;
+  let beta = null, gamma = null;
+  let vx = 1, vy = 0;
+  let successSince = null;
+  let mapBearing = 0;
+
+  const sensorBadge = $("sensorBadge"), secureBadge = $("secureBadge"), absBadge = $("absBadge");
+
+  function setBadge(el, text, kind=""){
+    el.className = "badge" + (kind ? " "+kind : "");
+    el.querySelector("span:last-child").textContent = text;
+  }
+
+  if (window.isSecureContext){
+    setBadge(secureBadge,"HTTPS / センサー利用可","on");
+  } else {
+    setBadge(secureBadge,"HTTPSではありません","warn");
+    $("sensorMsg").className="notice bad";
+    $("sensorMsg").textContent="この開き方ではスマホの方位センサーが使えない可能性が高いよ。HTTPSで公開するとセンサー版が動く。";
+  }
+
+  function updateHeading(h, source="sensor"){
+    if (!Number.isFinite(h)) return;
+    rawHeading = norm(h);
+
+    // Circular exponential smoothing
+    const r = rawHeading * Math.PI / 180;
+    const x = Math.cos(r), y = Math.sin(r);
+    const k = heading === null ? 1 : 0.22;
+    vx = (1-k)*vx + k*x;
+    vy = (1-k)*vy + k*y;
+    heading = norm(Math.atan2(vy,vx)*180/Math.PI);
+
+    const show = Math.round(heading)%360;
+    $("heading").textContent=show;
+    $("curDeg").textContent=show;
+    $("headingText").textContent=dirName(heading);
+    $("dial").style.transform=`rotate(${-heading}deg)`;
+
+    updateTargetUI();
+    updateLevelUI();
+    if(source==="sensor") {
+      setBadge(sensorBadge,"センサー接続中","on");
+    }
+  }
+
+  function updateTargetUI(){
+    $("targetDeg").textContent=Math.round(target)%360;
+    if(heading === null){
+      $("errorDeg").textContent="---";
+      $("targetPin").style.transform=`translateX(-50%) rotate(${target}deg)`;
+      return;
+    }
+    const err=diffSigned(target,heading);
+    $("errorDeg").textContent=Math.round(Math.abs(err));
+    // target marker relative to phone's current heading
+    $("targetPin").style.transform=`translateX(-50%) rotate(${err}deg)`;
+
+    const ae=Math.abs(err);
+    const msg=$("resultMsg");
+    if(ae <= 5){
+      if(!successSince) successSince=performance.now();
+      const elapsed=performance.now()-successSince;
+      msg.className="big-message good";
+      msg.textContent=elapsed>800 ? "🎉 方位OK！ その向き！" : "いい！そのままキープ…";
+      if(elapsed>800 && navigator.vibrate) navigator.vibrate(35);
+    }else{
+      successSince=null;
+      msg.className="big-message";
+      if(ae<=15) msg.textContent=`あと ${Math.round(ae)}°。かなり近い！`;
+      else {
+        const side=err>0 ? "右" : "左";
+        msg.textContent=`${side}へ約 ${Math.round(ae)}° 回ろう`;
+      }
+    }
+  }
+
+  function updateLevelUI(){
+    if(beta===null || gamma===null){
+      $("levelFill").style.width="0%"; return;
+    }
+    const tilt=Math.min(45, Math.hypot(beta,gamma));
+    const level=Math.max(0,100-(tilt/45*100));
+    $("levelFill").style.width=level+"%";
+  }
+
+  function getHeadingFromEvent(e){
+    beta = Number.isFinite(e.beta) ? e.beta : beta;
+    gamma = Number.isFinite(e.gamma) ? e.gamma : gamma;
+
+    if(Number.isFinite(e.webkitCompassHeading)){
+      gotAbsolute=true;
+      setBadge(absBadge, Number.isFinite(e.webkitCompassAccuracy) ? `磁気方位 ±${Math.round(e.webkitCompassAccuracy)}°` : "磁気方位","on");
+      return norm(e.webkitCompassHeading);
+    }
+    if(Number.isFinite(e.alpha)){
+      if(e.absolute || e.type==="deviceorientationabsolute"){
+        gotAbsolute=true;
+        setBadge(absBadge,"絶対方位","on");
+      } else if(!gotAbsolute) {
+        setBadge(absBadge,"相対方位の可能性","warn");
+      }
+      // W3C: horizontal compass heading = 360 - alpha
+      return norm(360 - e.alpha);
+    }
+    return null;
+  }
+
+  function orientationHandler(e){
+    if(manual) return;
+    const h=getHeadingFromEvent(e);
+    if(h!==null) updateHeading(h,"sensor");
+  }
+
+  async function startSensor(){
+    manual=false;
+    $("sensorMsg").className="notice";
+    $("sensorMsg").textContent="センサーを待っています… スマホを縦向き・画面を上にして水平に。";
+
+    if(typeof DeviceOrientationEvent==="undefined"){
+      $("sensorMsg").className="notice bad";
+      $("sensorMsg").textContent="このブラウザでは端末方位センサーAPIが見つからないよ。ChromeまたはSamsung Internetで試してみて。";
+      return;
+    }
+
+    try{
+      if(typeof DeviceOrientationEvent.requestPermission==="function"){
+        let p;
+        try { p = await DeviceOrientationEvent.requestPermission(true); }
+        catch(_) { p = await DeviceOrientationEvent.requestPermission(); }
+        if(p!=="granted") throw new Error("permission denied");
+      }
+
+      if(!sensorStarted){
+        window.addEventListener("deviceorientationabsolute", orientationHandler, true);
+        window.addEventListener("deviceorientation", orientationHandler, true);
+        sensorStarted=true;
+      }
+      setBadge(sensorBadge,"接続待ち…","warn");
+
+      setTimeout(()=>{
+        if(heading===null && !manual){
+          $("sensorMsg").className="notice bad";
+          $("sensorMsg").textContent="方位データがまだ来ていないよ。HTTPSで開いているか、ブラウザのモーション/センサー許可を確認してみて。";
+        } else if(!manual){
+          $("sensorMsg").className="notice good";
+          $("sensorMsg").textContent="接続OK。スマホを水平にして、身体ごとゆっくり回ってみて！";
+        }
+      },1800);
+    }catch(err){
+      $("sensorMsg").className="notice bad";
+      $("sensorMsg").textContent="センサー許可を取得できなかったよ。ブラウザのサイト権限を確認して、もう一度押してみて。";
+    }
+  }
+
+  function randomTarget(){
+    target = Math.round(Math.random()*35)*10 % 360;
+    successSince=null;
+    updateTargetUI();
+  }
+
+  function setNorth(){
+    target=0;successSince=null;updateTargetUI();
+  }
+
+  function randomPoint(){
+    return {x:90+Math.random()*460,y:65+Math.random()*270};
+  }
+
+  function generateMap(){
+    let a=randomPoint(), b=randomPoint(), count=0;
+    while(Math.hypot(b.x-a.x,b.y-a.y)<170 && count++<50) b=randomPoint();
+    const dx=b.x-a.x, dy=b.y-a.y;
+    mapBearing=norm(Math.atan2(dx,-dy)*180/Math.PI);
+
+    $("routeLine").setAttribute("x1",a.x); $("routeLine").setAttribute("y1",a.y);
+    $("routeLine").setAttribute("x2",b.x); $("routeLine").setAttribute("y2",b.y);
+    $("startTri").setAttribute("points",`${a.x},${a.y-20} ${a.x-17},${a.y+15} ${a.x+17},${a.y+15}`);
+    $("cpCircle").setAttribute("cx",b.x); $("cpCircle").setAttribute("cy",b.y);
+    $("startLabel").setAttribute("x",Math.min(600,a.x+25)); $("startLabel").setAttribute("y",a.y+6);
+    $("cpLabel").setAttribute("x",Math.min(600,b.x+30)); $("cpLabel").setAttribute("y",b.y+6);
+
+    $("mapAnswer").textContent="???";
+    $("guess").value="";
+    $("guessShow").textContent="---";
+    $("mapMsg").textContent="A→CP の方位角を実物コンパスで作って、数字を入力してみよう。";
+  }
+
+  function checkGuess(){
+    const val=Number($("guess").value);
+    if(!Number.isFinite(val) || val<0 || val>=360){
+      $("mapMsg").textContent="0〜359°で入力してね。";
+      return;
+    }
+    const g=norm(val);
+    const e=absDiff(g,mapBearing);
+    $("guessShow").textContent=Math.round(g);
+    $("mapAnswer").textContent=Math.round(mapBearing);
+    if(e<=5) $("mapMsg").textContent=`🎉 正解！ 誤差 ${Math.round(e)}°。かなり実戦的！`;
+    else if(e<=12) $("mapMsg").textContent=`惜しい！ 誤差 ${Math.round(e)}°。コンパスの縁をA→CP線にもう一度合わせてみて。`;
+    else $("mapMsg").textContent=`誤差 ${Math.round(e)}°。本体→リングの順番を確認してもう一度。`;
+  }
+
+  function useMapBearing(){
+    target=mapBearing;
+    successSince=null;
+    updateTargetUI();
+    window.scrollTo({top:0,behavior:"smooth"});
+    $("sensorMsg").className="notice good";
+    $("sensorMsg").textContent=`地図問題の正解 ${Math.round(mapBearing)}° を目標にセットしたよ。今度はスマホを実際にその方位へ向けよう。`;
+  }
+
+  $("startSensor").addEventListener("click",startSensor);
+  $("newTarget").addEventListener("click",randomTarget);
+  $("zeroTarget").addEventListener("click",setNorth);
+  $("newMap").addEventListener("click",generateMap);
+  $("checkGuess").addEventListener("click",checkGuess);
+  $("useMapBearing").addEventListener("click",useMapBearing);
+
+  $("manualRange").addEventListener("input",e=>{
+    $("manualDeg").textContent=e.target.value;
+    if(manual) updateHeading(Number(e.target.value),"manual");
+  });
+  $("manualMode").addEventListener("click",()=>{
+    manual=true;
+    heading=null; vx=1; vy=0;
+    setBadge(sensorBadge,"手動デモ","warn");
+    setBadge(absBadge,"センサー未使用","warn");
+    $("sensorMsg").className="notice";
+    $("sensorMsg").textContent="手動デモ中。スライダーを動かすとスマホの回転を疑似体験できるよ。";
+    updateHeading(Number($("manualRange").value),"manual");
+  });
+
+  randomTarget();
+  generateMap();
+  updateTargetUI();
+
+  // Portrait warning
+  const checkScreen=()=>{
+    const angle=(screen.orientation && Number.isFinite(screen.orientation.angle)) ? screen.orientation.angle : (window.orientation||0);
+    if(Math.abs(angle)%180===90 && sensorStarted && !manual){
+      $("sensorMsg").className="notice";
+      $("sensorMsg").textContent="横向きになってるよ。方位練習はスマホを縦向きで使ってね。";
+    }
+  };
+  window.addEventListener("orientationchange",checkScreen);
+  if(screen.orientation) screen.orientation.addEventListener("change",checkScreen);
+})();
+</script>
+</body>
+</html>
